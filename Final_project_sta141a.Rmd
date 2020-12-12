@@ -1,17 +1,31 @@
 ---
 title: "Final Project"
-author: "Truc, Mary, Lik, Mengna "
+author: 'Truc, Mary, Lik, Mengna '
 date: "12/1/2020"
 header-includes:
-   - \usepackage{enumerate,graphicx}
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{wrapfig}
+  - \usepackage{float}
+  - \usepackage{colortbl}
+  - \usepackage{pdflscape}
+  - \usepackage{tabu}
+  - \usepackage{threeparttable}
+  - \usepackage{threeparttablex}
+  - \usepackage[normalem]{ulem}
+  - \usepackage{makecell}
+  - \usepackage{xcolor}
 geometry: margin=0.5in 
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
+# Data Wrangling
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE,warning = FALSE)
 set.seed(1)
 library(ggplot2)
 library(knitr)
@@ -35,7 +49,12 @@ library(class)
 library(kknn)
 library(AUC)
 library(rmarkdown)
-
+library(e1071)
+library(DT)
+library(xtable)
+library(kableExtra)
+library(devtools)
+library(pander)
 
 #######Set up and Data Wrangling########
 
@@ -84,15 +103,17 @@ bank$month = fct_explicit_na(bank$month, "missing")
 
 bank$y =ifelse(bank$y =='yes',1,0) # transforming 'yes' category into a binary 1=yes 0=no
 ```
-
-```{r, echo=FALSE, message = 1:10}
+# Data Exploration
+```{r, echo=FALSE,warning = FALSE}
+datatable(bank)
 ##### Data Exploration ######
-
-summary(bank) # summary of each categories 
+#summary of each categories
+pandoc.table(summary(bank), style="rmarkdown", caption="Bank Summary")
 
 invisible(str(bank)) # show the content of each categories 
 
-prop.table(table(bank$y)) 
+kbl(prop.table(table(bank$y)), booktabs = TRUE, caption = "
+Frequency of Response Variable" )
 # the dataset predicted outcome (y) is skewed towards 'no' with over 88%
 
 # checking the sixe of the dataset
@@ -104,7 +125,7 @@ invisible(head(bank))
 
 ```
 
-```{r,fig.align='center',fig.width=5,fig.height=3.5, echo=FALSE}
+```{r,fig.dim = c(4, 4), echo=FALSE,warning = FALSE}
 bank %>% dplyr::select(age, duration, campaign, emp.var.rate, cons.price.idx, cons.conf.idx, euribor3m, nr.employed,y) %>% cor() %>% 
   corrplot(method = "pie",
            type = "upper",
@@ -125,10 +146,10 @@ pairs(bank_matrix_factor2)
 
 ```
 
-
-```{r, echo=FALSE, message = 1:10}
+# Age
+```{r, echo=FALSE, results='asis'}
 ##### Category: Age
-summary(bank$age)
+pandoc.table(summary(bank$age), style="grid")
 gg <- ggplot(bank)
 
 # histogram plot for the distribution of age
@@ -156,23 +177,23 @@ his_age_sub = ggplot (bank_additional_full, aes(x=age)) +
 
 ```
 
-```{r,fig.align='center',fig.width=5,fig.height=3.5, echo=FALSE}
-{par(mfrow=c(1, 3))
-  his_age
-  bp_age
-  his_age_sub
-  }
-bank_additional_full %>% 
+```{r,out.width=c('50%', '50%'), echo=FALSE}
+his_age
+his_age_sub
+
+
+age_<-bank_additional_full %>% 
   group_by(age) %>% 
   summarize(age.cnt = n(), pct.con.yes = mean(y=="yes")*100) %>% 
   arrange(desc(age.cnt)) %>% 
   head() 
 
+kbl(age_, booktabs = TRUE, caption = "Age Percentage to Subscribe")
 ```
-
-```{r, echo=FALSE, message = 1:10}
+# Education
+```{r, echo=FALSE}
 # Category: Education
-summary(bank$education)
+kbl(summary(bank$education), booktabs = TRUE)
 
 #Bar graph for education 
 gg_edu=ggplot(bank, aes(x = education, fill=education))+geom_bar()+ggtitle("Distribution of Education Levels")
@@ -188,21 +209,22 @@ edu_sub = ggplot(data = bank_additional_full, aes(x=education, fill=y)) +
 
 ```
 
-```{r,fig.align='center',fig.width=5,fig.height=3.5, echo=FALSE}
-{par(mfrow=c(1, 2))
-  gg_edu
-  edu_sub}
+```{r,out.width=c('50%', '50%'), echo=FALSE}
+gg_edu
+edu_sub
 # Percentage of Yes within each group based on their education level 
-bank_additional_full %>% 
+edu_ <- bank_additional_full %>% 
   group_by(education) %>% 
   summarize(pct.yes = mean(y=="yes")*100) %>% 
   arrange(desc(pct.yes))
 
-```
+kbl(edu_, booktabs = TRUE, caption = "Education Percentage to Subscribe")
 
-```{r, echo=FALSE, message = 1:10}
+```
+# Job
+```{r, echo=FALSE}
 # Category: Job
-summary(bank$job)
+kbl(summary(bank$job), booktabs = TRUE)
 
 # bar graph for job
 gg_job = ggplot(bank, aes(x = job, fill=job))+geom_bar()+ggtitle("Distribution of Jobs") 
@@ -213,40 +235,52 @@ job_sub = ggplot(data = bank_additional_full, aes(x=job, fill=y)) +
          ggtitle("Term Deposit Subscription based on Job Position") +
          xlab(" Job Position") +
          guides(fill=guide_legend(title="Subscription of Term Deposit"))
-{par(mfrow=c(1, 2))
-  gg_job
-  job_sub}
+```
+
+```{r,out.width=c('50%', '50%'), echo=FALSE}
+
+gg_job
+job_sub
 # Percentage of Yes in each group based on their job title
-bank_additional_full %>% 
+job_<-bank_additional_full %>% 
   group_by(job) %>% 
   summarize(pct.yes = mean(y=="yes")*100) %>% 
   arrange(desc(pct.yes))
-```
-```{r, echo=FALSE, message = 1:10}
-# Category: Martial Statues  
 
-# bar chart for martial status
-gg_martial = ggplot(bank, aes(x = marital, fill=marital)) + geom_bar() + 
+kbl(job_, booktabs = TRUE, caption = "Job Percentage to Subscribe")
+
+```
+# Marital Status 
+```{r, echo=FALSE}
+# Category: Marital Statues  
+kbl(summary(bank$marital), booktabs = TRUE)
+# bar chart for marital status
+gg_marital = ggplot(bank, aes(x = marital, fill=marital)) + geom_bar() + 
   ggtitle("Distribution of Martial Status") + xlab("Martial Status")
 
 # Subscription by marital status 
 marital_sub = ggplot(bank_additional_full, aes(x = marital, fill=y)) + geom_bar() + 
   ggtitle("Distribution of Martial Status by subscription") + xlab("Martial Status")
 
-# Percentage of Yes in each group based on their Marital status 
-{par(mfrow=c(1, 2))
-  gg_martial
-  marital_sub}
+```
 
-bank_additional_full %>% 
+```{r,out.width=c('50%', '50%'), echo=FALSE}
+
+# Percentage of Yes in each group based on their Marital status 
+gg_marital
+marital_sub
+
+mar_<-bank_additional_full %>% 
   group_by(marital) %>% 
   summarize(pct.yes = mean(y=="yes")*100) %>% 
   arrange(desc(pct.yes))
 
+kbl(mar_, booktabs = TRUE, caption = "marital Percentage to Subscribe")
 ```
-```{r, echo=FALSE, message = 1:10}
+# Consumer Price Index
+```{r, echo=FALSE}
 # Consumer Price Index Distribution Graphs
-summary(bank$cons.price.idx)
+pandoc.table(summary(bank$cons.price.idx), style="grid")
 # Using GGplot, I constructed a bar graph to show the distribution of the consumer price index
 bar_price.idx=ggplot(bank, aes(x = cons.price.idx, fill=cons.price.idx)) + geom_bar()+
   geom_vline(aes(xintercept=mean(cons.price.idx)),color="red")+ggtitle("Consumer Price Index with Red Mean Line")
@@ -264,25 +298,24 @@ his_cpi_sub =  ggplot(bank_additional_full, aes(x = cons.price.idx, fill=y)) + g
 
 
 ```
-```{r,fig.align='center',fig.width=5,fig.height=3.5, echo=FALSE}
-{par(mfrow=c(2, 2))
-  bar_price.idx
-  bp_cpi
-  bar_cpi_sub
-  his_cpi_sub}
 
-bank_additional_full %>% 
+```{r,out.width=c('50%', '50%'), echo=FALSE}
+bar_price.idx
+his_cpi_sub
+
+cpi_<-bank_additional_full %>% 
   group_by(cons.price.idx) %>% 
   summarize(cpi.cnt = n(), pct.con.yes = mean(y=="yes")*100) %>% 
   arrange(desc(cpi.cnt)) %>% 
   head() 
+kbl(cpi_, booktabs = TRUE, caption = "Consumer Price Index Percentage to Subscribe")
 ```
 
-
-```{r, echo=FALSE, message = 1:10}
+# Consumer Confidence Index 
+```{r, echo=FALSE}
 
 # Category: Consumer Confidence Index Graphs 
-summary(bank$cons.conf.idx)
+pandoc.table(summary(bank$cons.conf.idx), style="grid")
 
 bar_conf.idx=ggplot(bank, aes(x = cons.conf.idx, fill=cons.conf.idx)) + geom_bar()+
   ggtitle("Consumer Confidence Index Bar Graph")
@@ -291,7 +324,7 @@ bar_conf.idx=ggplot(bank, aes(x = cons.conf.idx, fill=cons.conf.idx)) + geom_bar
 bp_cci = gg+ geom_boxplot(aes(x="", y=cons.conf.idx),outlier.colour = "red")+
   ggtitle("Consumer Confidence Index Boxplot")+ ylab("Consumer Confidence Index")
 
-# Subscription by Consumer Price Index
+# Subscription by Consumer Confidence Index
 
 bar_cci_sub = ggplot(bank_additional_full, aes(x = cons.conf.idx, fill=y)) + geom_bar() + 
   ggtitle("Term Deposit of Subscription by Consumer Confidence Index") + xlab("Consumer Confidence Index")
@@ -302,23 +335,22 @@ his_cci_sub = ggplot(bank_additional_full, aes(x=cons.conf.idx, fill=y)) +
 
                                                                       
 ```
-```{r,fig.align='center',fig.width=5,fig.height=3.5, echo=FALSE}
-{par(mfrow=c(2, 2))
-  bar_conf.idx
-  bp_cci
-  bar_cci_sub
-  his_cci_sub}
 
-bank_additional_full %>% 
+```{r,out.width=c('50%', '50%'), echo=FALSE}
+bar_conf.idx
+his_cci_sub
+
+cci_<-bank_additional_full %>% 
   group_by(cons.conf.idx) %>% 
   summarize(cci.cnt = n(), pct.con.yes = mean(y=="yes")*100) %>% 
   arrange(desc(cci.cnt)) %>% 
   head() 
+kbl(cci_, booktabs = TRUE, caption = "Consumer Confidence Index Percentage to Subscribe")
 ```
-
-```{r, echo=FALSE, message = 1:10}
+# Campaign
+```{r, echo=FALSE}
 # Category: Campaign
-summary(bank$campaign)
+pandoc.table(summary(bank$campaign), style="grid")
 
 bar_campaign=ggplot(bank, aes(x = campaign, fill=campaign)) + geom_bar()+
   ggtitle("Campaign")
@@ -335,25 +367,24 @@ his_campaign_sub = ggplot(bank_additional_full, aes(x = campaign, fill=y)) + geo
 
  
 ```
-```{r,fig.align='center',fig.width=5,fig.height=3.5, echo=FALSE}
-{par(mfrow=c(2, 2))
-  bar_campaign
-  bp_campaign
-  bar_campaign_sub
-  his_campaign_sub}
 
-bank_additional_full %>% 
+```{r,out.width=c('50%', '50%'), echo=FALSE}
+bar_campaign
+his_campaign_sub
+
+cam_<-bank_additional_full %>% 
   group_by(campaign) %>% 
   summarize(contact.cnt = n(), pct.con.yes = mean(y=="yes")*100) %>% 
   arrange(desc(contact.cnt)) %>% 
   head()
+kbl(cam_, booktabs = TRUE, caption = "Campaign Percentage to Subscribe")
 ```
 
-
-```{r, echo=FALSE, message = 1:10}
+# Duration
+```{r, echo=FALSE}
 # Category : Duration
 
-summary(bank$duration)
+pandoc.table(summary(bank$duration), style="grid")
 
 bar_duration=ggplot(bank, aes(x = duration, fill=duration)) + geom_bar(fill="blue")+
   ggtitle("Duration Distribution")
@@ -365,21 +396,24 @@ his_dur_sub = ggplot(bank_additional_full, aes(x = duration, fill=y)) + geom_his
   ggtitle("Term Deposit of Subscription by Duration") + xlab("Duration")+coord_cartesian(xlim = c(0,2000), ylim = c(0,1000))+geom_vline(data=mean_duration, aes(xintercept = grp.mean), color="red")
  
 ```
-```{r,fig.align='center',fig.width=5,fig.height=3.5, echo=FALSE}
-{par(mfrow=c(1, 2))
-  bar_duration
-  his_dur_sub}
 
-bank_additional_full %>% 
+```{r,out.width=c('50%', '50%'), echo=FALSE}
+bar_duration
+his_dur_sub
+
+dur_<-bank_additional_full %>% 
   group_by(duration) %>% 
   summarize(contact.cnt = n(), pct.con.yes = mean(y=="yes")*100) %>% 
   arrange(desc(contact.cnt)) %>% 
   head()
-```
 
-```{r, echo=FALSE, message = 1:10}
+kbl(dur_, booktabs = TRUE, caption = "Duration Percentage to Subscribe")
+
+```
 # Employment Variation Rate
-summary(bank$emp.var.rate)
+```{r, echo=FALSE}
+# Employment Variation Rate
+pandoc.table(summary(bank$emp.var.rate), style="grid")
 
 his_evr = ggplot(bank, aes(x = emp.var.rate, fill=emp.var.rate)) + geom_histogram(fill="blue")+
   ggtitle("Employment Variation Rate")
@@ -389,27 +423,29 @@ mean_evr <- bank_additional_full %>% group_by(y) %>% summarize(grp.mean=mean(emp
 his_evr_sub = ggplot(bank_additional_full, aes(x = emp.var.rate, fill=y)) + geom_histogram(binwidth = 2) +facet_grid(cols=vars(y))+ggtitle("Term Deposit of Subscription by Employment Variation Rate") + xlab("Employment Variation Rate")+geom_vline(data=mean_evr, aes(xintercept = grp.mean), color="red")
 
 ```
-```{r,fig.align='center',fig.width=5,fig.height=3.5, echo=FALSE}
-{par(mfrow=c(1, 2))
-  his_evr
-  his_evr_sub}
 
-bank_additional_full %>% 
+```{r,out.width=c('50%', '50%'), echo=FALSE}
+his_evr
+his_evr_sub
+
+evr_<-bank_additional_full %>% 
   group_by(emp.var.rate) %>% 
   summarize(contact.cnt = n(), pct.con.yes = mean(y=="yes")*100) %>% 
   arrange(desc(contact.cnt)) %>% 
   head() 
+kbl(evr_, booktabs = TRUE, caption = "Employment Variation Rate Percentage to Subscribe")
 ```
 
 
 ```{r, echo=FALSE, eval=TRUE}
 #Split the Training / Testing data 
+set.seed(1)
 split = sample.split(bank$y,SplitRatio = 0.70)
 train = subset(bank, split == TRUE)
 test = subset(bank, split == FALSE)
 
 ```
-
+# Decision Tree
 ```{r, echo=FALSE}
 # Model 1: Decision Tree with training set
 tree_model <-rpart(y ~ .,
@@ -439,6 +475,10 @@ rocr.auc = as.numeric(performance(rocr.pred, "auc")@y.values)
 # print ROC AUC
 invisible(rocr.auc)
 
+
+```
+
+```{r,out.width=c('50%', '50%'), echo=FALSE}
 #plot ROC curve
 roc_curve<-{plot(rocr.perf,
      lwd = 3, colorize = TRUE,
@@ -448,39 +488,21 @@ roc_curve<-{plot(rocr.perf,
 mtext(paste('Decision Tree - auc : ', round(rocr.auc, 5)))
 abline(0, 1, col = "red", lty = 1)}
 
-{par(mfrow=c(1, 2))
-  tree_model
-  roc_curve}
-
-```
-```{r,fig.align='center',fig.width=5,fig.height=3.5, echo=FALSE}
-#plot ROC curve
-roc_curve<-{plot(rocr.perf,
-     lwd = 3, colorize = TRUE,
-     print.cutoffs.at = seq(0, 1, by = 0.1),
-     text.adj = c(-0.2, 1.7),
-     main = 'ROC Curve')
-mtext(paste('Decision Tree - auc : ', round(rocr.auc, 5)))
-abline(0, 1, col = "red", lty = 1)}
-
-{par(mfrow=c(1, 2))
-  tree_model
-  roc_curve}
+roc_curve
 ```
 
+# General Logisitic Regression
 
-
-```{r, echo=FALSE, message = 1:10}
+```{r, echo=FALSE}
 
 # Model 2: General Logistic Regression
-
-table(train$y)
+invisible(table(train$y))
 
 model_glm <- glm(formula = y ~ age+ job + marital + education + default + housing + 
     loan + contact + month + duration+ day_of_week + campaign + pdays + 
     previous + poutcome + emp.var.rate + cons.price.idx + cons.conf.idx + 
     euribor3m + nr.employed, family = "binomial", data = train)
-
+options(max.print = 20)
 summary(model_glm)
 
 bank_glm_pred <- predict(model_glm, test, type = "response")
@@ -497,6 +519,11 @@ auc_glm<-bank_glm_auc@y.values[[1]]
 # print ROC AUC
 invisible(auc_glm)
 
+
+```
+
+```{r,fig.width=5,fig.height=5, echo=FALSE}
+
 #plot ROC curve
 roc_curve<-{plot(rocr.perf_glm,
      lwd = 3, colorize = TRUE,
@@ -505,27 +532,28 @@ roc_curve<-{plot(rocr.perf_glm,
      main = 'ROC Curve')
 mtext(paste('General Logistic Regression - auc : ', round(auc_glm, 5)))
 abline(0, 1, col = "red", lty = 1)}
-
-```
-```{r,fig.align='center',fig.width=5,fig.height=3.5, echo=FALSE}
-#plot ROC curve
 roc_curve
 ```
-
-```{r, echo=FALSE, message = 1:10}
+# K-Nearest Neighbor
+```{r, echo=FALSE}
 # Model 3: K-Nearest Neighbor
 # have to make the y into a factor in order to run the knn code
+set.seed(1)
 split = sample.split(bank$y,SplitRatio = 0.70)
 train = subset(bank, split == TRUE)
 test = subset(bank, split == FALSE)
 train$y <- as.factor(train$y)
 test$y <- as.factor(test$y)
 
+options(max.print = 20)
 model.KNN <- kknn( y ~ age+ job + marital + education + default + housing + 
     loan + contact + month + duration+ day_of_week + campaign + pdays + 
     previous + poutcome + emp.var.rate + cons.price.idx + cons.conf.idx + 
-    euribor3m + nr.employed, train, test, k=5, distance = 2,scale=FALSE, getOption(max.print=100))
+    euribor3m + nr.employed, train, test, k=5, distance = 2,scale=FALSE, getOption(max.print=20))
+
+options(max.print = 50)
 summary(model.KNN)
+
 
 bank_knn_pred <-NULL
 bank_knn_pred <- predict(model.KNN, test, type="raw")
@@ -545,7 +573,8 @@ auc_knn<-auc(roc(predictions, labels), min = 0, max = 1)
       
 
 ```
-```{r,fig.align='center',fig.width=5,fig.height=3.5, echo=FALSE}
+
+```{r,fig.width=5,fig.height=5, echo=FALSE}
 #plot ROC curve
 {plot(roc(predictions, labels), col="blue",
       lwd=3,
@@ -554,35 +583,43 @@ auc_knn<-auc(roc(predictions, labels), min = 0, max = 1)
   abline(0, 1, col = "red", lty = 1)}
       
 ```
+
+# Support Vector Machine
+### Vanilladot
 ```{r, echo =FALSE}
-# Extra Credit
+# Extra Credit: Support Vector Machine
 
 library(kernlab)
+
+#vanilladot
 bank_classifier <- ksvm(as.factor(y) ~ ., data = train,kernel = "vanilladot")
-bank_classifier
-
-
 #predictions:
 bank_predictions <- predict(bank_classifier, test)
 #Check the accuracy:
+print("vanilladot")
 caret::confusionMatrix(bank_predictions,as.factor(test$y))
 agreement <- bank_predictions == as.factor(test$y)
 prop.table(table(agreement))
 #We get an accuracy of 90.9% with a simple linear kernel
-
+```
+### Gaussian
+```{r, echo =FALSE}
 
 #Gaussian
 bank_classifier_rbf <- ksvm(as.factor(y) ~ ., data = train,kernel = "rbfdot")
 #predictions:
 bank_predictions <- predict(bank_classifier_rbf,test)
 #Check the accuracy:
+print("Gaussian")
 caret::confusionMatrix(bank_predictions,as.factor(test$y))
 agreement <- bank_predictions == as.factor(test$y)
 prop.table(table(agreement))
 #We get an accuracy of 91.4% with a Gaussian kernel
 
 
+
 ```
+
 
 ```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
 # this is the code appendix 
