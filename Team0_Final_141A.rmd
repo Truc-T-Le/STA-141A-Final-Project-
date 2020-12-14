@@ -18,16 +18,15 @@ body{ /* Normal  */
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo=FALSE,message=FALSE,warning=FALSE)
-knitr::opts_chunk$set(echo = TRUE, message = FALSE,warning = FALSE)
 set.seed(1)
-library(ggplot2) # ggplot 
-library(knitr)  # file knitting
-library(magrittr) # %>% 
-library(dplyr) # grammar of data manipulation
-library(tidyverse) # grammar of data manipulation
-library(ggcorrplot) # correlation plot
-library(rpart) # decision tree
-library(rpart.plot) # decision tree plot
+library(ggplot2)
+library(knitr)
+library(magrittr) 
+library(dplyr)
+library(tidyverse)
+library(ggcorrplot)
+library(rpart)
+library(rpart.plot)
 library(ISLR)
 library(caret)
 library(gbm)
@@ -37,15 +36,15 @@ library(MASS)
 library(caTools)
 library(rsample)
 library(class)
-library(kknn) #K-Nearest Neighbor
+library(kknn)
 library(AUC)
 library(rmarkdown)
 library(e1071)
-library(DT)
 library(xtable)
 library(kableExtra)
 library(devtools)
 library(pander)
+library(kernlab)
 ```
 
 ***
